@@ -236,10 +236,12 @@
     <fieldset class="foldable">
         <legend style="text-align: left;" onclick="this.parentNode.classList.toggle('expanded');"><b>Protobuf Commands</b></legend>
         <div style="display:inline-block;">
-            <input type="button" onclick="bufferBtAction(sendNetwToSingle, [encodeBLE(protoRequestConnectT()), 0])" value="Connect Stored WIFI">
-            <input type="button" onclick="sendCommand(encodeBLE(protoLiveStreamT()));" value="Start Live Stream"><br>
-            <p>WIFI:</p><p id="wifi_id" contenteditable="true">net_id</p>  <p>MBPS:</p><p id="mbps_id" contenteditable="true">8000</p> <br>
-            <p>RTMP:</p><p id="rtmp_id" contenteditable="true">rtmp://192.168.0.1/</p><br>
+            <input type="button" onclick="sendNetw(protoStartScan); sendNetw(encodeBLE(protoRequestConnectT()))"
+                    value="Connect Stored WIFI">
+            <input type="button" onclick="sendCommand(encodeBLE(protoLiveStreamT()));"
+                value="Start Live Stream"><br>
+            <p>WIFI:</p> <p id="wifi_id" contenteditable="true">net_id</p>  <p>MBPS:</p>  <p id="mbps_id" contenteditable="true">8000</p> <br>
+            <p>RTMP:</p> <p id="rtmp_id" contenteditable="true">rtmp://192.168.0.1/</p><br>
         </div>
     </fieldset>
 
@@ -429,6 +431,7 @@
 
     // Protobuf templates, see opengopro docs & protobufs
     // https://www.protobufpal.com/ useful tool
+    var protoStartScan = Uint8Array.from([0x02, 0x02, 0x02]) //pre-encoded
     var protoRequestConnectT = function() {
         var header = [0x02, 0x04, 0x0A];
         //ssid
@@ -866,6 +869,12 @@
                         bufferExecNext();
                     });
             }
+    }
+
+    function sendNetw(command) {
+        for (var i = 0; i < connectedDevs.length; i++) {
+            bufferBtAction(sendNetwToSingle, [command, i]);
+        }
     }
 
     function sendNetwToSingle(args) {
