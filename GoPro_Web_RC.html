@@ -213,6 +213,8 @@
         .has-submenu:focus::after {
             content: "\25B2";
         }
+
+        p {display:inline; overflow: hidden; white-space: nowrap;}
     </style>
 </head>
 
@@ -223,8 +225,8 @@
             style="height: fit-content;margin-top: 15px;">
     </div>
     <span id="status" style="display: block;min-height: 22px;color:#ffbf00;"></span>
-    <fieldset>
-        <legend style="text-align: left;"><b>Control</b></legend>
+    <fieldset class="foldable expanded">
+        <legend style="text-align: left;" onclick="this.parentNode.classList.toggle('expanded');"><b>Control</b></legend>
         <div style="display:inline-block;">
             <input type="button" onclick="sendCommand(shutterOn);" value="Shutter: on">
             <input type="button" onclick="sendCommand(shutterOff);" value="Shutter: off"><br>
@@ -234,7 +236,17 @@
             <input type="button" onclick="sendCommand(hilight);" value="Hilight moment">
         </div>
     </fieldset>
-    <fieldset class="foldable expanded">
+    <fieldset class="foldable">
+        <legend style="text-align: left;" onclick="this.parentNode.classList.toggle('expanded');"><b>Protobuf Commands</b></legend>
+        <div style="display:inline-block;">
+            <input type="button" onclick="bufferBtAction(sendNetwToSingle, [encodeBLE(protoRequestConnectT()), 0])" value="Connect Stored WIFI">
+            <input type="button" onclick="sendCommand(encodeBLE(protoLiveStreamT()));" value="Start Live Stream"><br>
+            <p>WIFI:</p><p id="wifi_id" contenteditable="true">net_id</p>  <p>MBPS:</p><p id="mbps_id" contenteditable="true">8000</p> <br>
+            <p>RTMP:</p><p id="rtmp_id" contenteditable="true">rtmp://192.168.0.1/</p><br>
+        </div>
+    </fieldset>
+
+    <fieldset class="foldable">
         <legend style="text-align: left;" onclick="this.parentNode.classList.toggle('expanded');"><b>Load Presets</b>
         </legend>
         <div style="display:inline-block;">
@@ -423,7 +435,7 @@
     var protoRequestConnectT = function() {
         var header = [0x02, 0x04, 0x0A];
         //ssid
-        var ssid = "network_name"; //TODO
+        var ssid = document.getElementById("wifi_id").innerText
         var command = [header, protobufFromString(ssid)].flat();
         return command;
     }
@@ -433,8 +445,8 @@
         var pbRoot = protobuf.parse(streamProtobuf, { keepCase: true }).root;
         var RequestSetLiveStreamMode = pbRoot.lookupType("open_gopro.RequestSetLiveStreamMode");
 
-        var url = "rtsp://192.168.0.1/"; //TODO
-        var bitrate = 8000
+        var url = document.getElementById("rtmp_id").innerText
+        var bitrate = parseInt(document.getElementById("mbps_id").innerText)
 
         var payload = {
             "url": url,
@@ -675,6 +687,9 @@
                                 dev.commandRespCharacteristic = characteristic;
                                 startNotifications(dev.commandRespCharacteristic);
                                 return;
+                            case networkUUID:
+                                dev.networkCharacteristic = characteristic;
+                                return;
                             case settingsUUID:
                                 dev.settingsCharacteristic = characteristic;
                                 return;
@@ -845,6 +860,26 @@
         if (connectedDevs[camIndex].server != null)
             if (connectedDevs[camIndex].server.connected) {
                 connectedDevs[camIndex].commandCharacteristic.writeValueWithoutResponse(command)
+                    .then(_ => {
+                        bufferExecNext();
+                    })
+                    .catch(error => {
+                        console.log(new Date().toLocaleString() + ' [sendCommandToSingle] ERROR! ' + error);
+                        logError("[sendCommandToSingle] " + error);
+                        bufferExecNext();
+                    });
+            }
+    }
+
+    function sendNetwToSingle(args) {
+        var command = args[0],
+            camIndex = args[1];
+
+        var headerLength = getHeaderLength(command);
+
+        if (connectedDevs[camIndex].server != null)
+            if (connectedDevs[camIndex].server.connected) {
+                connectedDevs[camIndex].networkCharacteristic.writeValueWithoutResponse(command)
                     .then(_ => {
                         bufferExecNext();
                     })
