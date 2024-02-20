@@ -368,6 +368,7 @@
     </ul>
 </body>
 
+<script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.6/dist/protobuf.min.js"></script>
 <script>
     // Custom GoPro services
     var controlServiceUUID = "0000fea6-0000-1000-8000-00805f9b34fb"; // Cam control service
@@ -416,6 +417,67 @@
     // Querys (0x0076)
     var qSpace = Uint8Array.from([0x02, 0x13, 0x36]);
     var qPreset = Uint8Array.from([0x02, 0x13, 0x61]);
+
+    // Protobuf templates, see opengopro docs & protobufs
+    // https://www.protobufpal.com/ useful tool
+    var protoRequestConnectT = function() {
+        var header = [0x02, 0x04, 0x0A];
+        //ssid
+        var ssid = "network_name"; //TODO
+        var command = [header, protobufFromString(ssid)].flat();
+        return command;
+    }
+    var streamProtobuf
+    var protoLiveStreamT = function() {
+        var header = [0xF1, 0x79];
+        var pbRoot = protobuf.parse(streamProtobuf, { keepCase: true }).root;
+        var RequestSetLiveStreamMode = pbRoot.lookupType("open_gopro.RequestSetLiveStreamMode");
+
+        var url = "rtsp://192.168.0.1/"; //TODO
+        var bitrate = 8000
+
+        var payload = {
+            "url": url,
+            "encode": false,
+            "window_size": "WINDOW_SIZE_1080",
+            "minimum_bitrate": bitrate,
+            "maximum_bitrate": bitrate,
+            "starting_bitrate": bitrate,
+            "lens": "LENS_WIDE"
+          };
+
+        var buffer = RequestSetLiveStreamMode.encode(RequestSetLiveStreamMode.create(payload)).finish();
+        var command = [header, Array.from(buffer)].flat();
+
+        return command;
+    }
+
+    function protobufFromString(str) {
+        return [[str.length], str.split('')].flat();
+    }
+
+    function encodeBLE(command) {
+        var header13 = [0x20, 0x00];
+        var headerCont = [0x80];
+
+        var buffer = header13;
+        var length = command.length;
+
+        header13[0] += (length / 256) |0;
+        header13[1] += (length % 256) |0;
+
+        buffer.push(...command.splice(0, (20 - header13.length)));
+
+        while (command.length > 0)
+        {
+            buffer.push(...headerCont);
+            buffer.push(...command.splice(0, (20 - headerCont.length)));
+            headerCont[0]++;
+        }
+
+        //console.log("ble ", Array.apply([], buffer).join(","))
+        return Uint8Array.from(buffer);
+    }
 
     // TODO get all GoPro model IDs
     var gopro_models = {
@@ -1027,6 +1089,37 @@
     function getBit(num, bit) {
         return ((num >> bit) % 2 != 0 ? 1 : 0)
     }
+
+
+    /// Protobufs
+    streamProtobuf = String.raw`
+syntax = "proto2";
+package open_gopro;
+
+enum EnumLens {
+    LENS_WIDE      = 0;
+    LENS_LINEAR    = 4;
+    LENS_SUPERVIEW = 3;
+}
+
+enum EnumWindowSize {
+    WINDOW_SIZE_480  = 4;
+    WINDOW_SIZE_720  = 7;
+    WINDOW_SIZE_1080 = 12;
+}
+
+message RequestSetLiveStreamMode {
+    optional string         url              = 1;
+    optional bool           encode           = 2;
+    optional EnumWindowSize window_size      = 3;
+    optional bytes          cert             = 6;
+    optional int32          minimum_bitrate  = 7;
+    optional int32          maximum_bitrate  = 8;
+    optional int32          starting_bitrate = 9;
+    optional EnumLens       lens             = 10;
+}
+    `;
+
 </script>
 
 </html>
