@@ -388,6 +388,7 @@
     var battInfoUUID = "0000180f-0000-1000-8000-00805f9b34fb"; // Battery service
     // Custom GoPro characteristics
     var networkUUID = "b5f90091-aa8d-11e3-9046-0002a5d5c51b";       // Command [WRITE]
+    var networkRespUUID = "b5f90092-aa8d-11e3-9046-0002a5d5c51b";       // Command [WRITE]
     var commandUUID = "b5f90072-aa8d-11e3-9046-0002a5d5c51b";       // Command [WRITE]
     var commandRespUUID = "b5f90073-aa8d-11e3-9046-0002a5d5c51b";   // Command response [NOTIFY]
     var settingsUUID = "b5f90074-aa8d-11e3-9046-0002a5d5c51b";      // Settings [WRITE]
@@ -689,6 +690,10 @@
                                 return;
                             case networkUUID:
                                 dev.networkCharacteristic = characteristic;
+                                return;
+                            case networkRespUUID:
+                                dev.networkRespCharacteristic = characteristic;
+                                startNotifications(dev.networkRespCharacteristic);
                                 return;
                             case settingsUUID:
                                 dev.settingsCharacteristic = characteristic;
