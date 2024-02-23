@@ -236,7 +236,7 @@
     <fieldset class="foldable">
         <legend style="text-align: left;" onclick="this.parentNode.classList.toggle('expanded');"><b>Protobuf Commands</b></legend>
         <div style="display:inline-block;">
-            <input type="button" onclick="sendNetw(protoStartScan); sendNetw(protoRequestConnectT())"
+            <input type="button" onclick="sendNetw(protoStartScan); setTimeout(()=> sendNetw(protoGetAPList), 1000); setTimeout(()=> sendNetw(protoRequestConnectT()), 2000);"
                     value="Connect Stored WIFI">
             <input type="button" onclick="sendCommand(protoLiveStreamT());"
                 value="Start Live Stream"><br>
@@ -434,6 +434,7 @@
     // Protobuf templates, see opengopro docs & protobufs
     // https://www.protobufpal.com/ useful tool
     var protoStartScan = Uint8Array.from([0x02, 0x02, 0x02]) //pre-encoded
+    var protoGetAPList = Uint8Array.from([0x08, 0x02, 0x03, 0x08, 0x00, 0x10, 0x01, 0x18, 0x00]) //pre-encoded
     var protoRequestConnectT = function() {
         var header = [0x02, 0x04, 0x0A];
         //ssid
