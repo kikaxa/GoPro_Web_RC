@@ -386,6 +386,7 @@
     // Standard services
     var defInfoUUID = "0000180a-0000-1000-8000-00805f9b34fb";  // Device information
     var battInfoUUID = "0000180f-0000-1000-8000-00805f9b34fb"; // Battery service
+    var camNetControlUUID = "b5f90090-aa8d-11e3-9046-0002a5d5c51b";       // GoPro Camera Management
     // Custom GoPro characteristics
     var networkUUID = "b5f90091-aa8d-11e3-9046-0002a5d5c51b";       // Command [WRITE]
     var networkRespUUID = "b5f90092-aa8d-11e3-9046-0002a5d5c51b";       // Command [WRITE]
@@ -551,7 +552,7 @@
 
         filters.push({ services: [controlServiceUUID] });
         options.filters = filters;
-        options.optionalServices = [controlServiceUUID, defInfoUUID, battInfoUUID];
+        options.optionalServices = [controlServiceUUID, defInfoUUID, battInfoUUID, camNetControlUUID];
 
         console.log('Requesting Bluetooth Device...');
         console.log('with ' + JSON.stringify(options));
@@ -648,6 +649,12 @@
                                     console.log('Got battInfo Service');
                                     console.log('Getting battLevel Characteristic...');
                                     bufferBtAction(getCharacteristic, [service, battLevelUUID]);
+                                    break;
+                                case camNetControlUUID:
+                                    console.log('Got netControl Service');
+                                    console.log('Getting network Characteristic...');
+                                    bufferBtAction(getCharacteristic, [service, networkUUID]);
+                                    bufferBtAction(getCharacteristic, [service, networkRespUUID]);
                                     break;
                             }
                         }
