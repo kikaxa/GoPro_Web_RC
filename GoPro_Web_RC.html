@@ -236,7 +236,7 @@
     <fieldset class="foldable">
         <legend style="text-align: left;" onclick="this.parentNode.classList.toggle('expanded');"><b>Protobuf Commands</b></legend>
         <div style="display:inline-block;">
-            <input type="button" onclick="sendNetw(protoStartScan); setTimeout(()=> sendNetw(protoGetAPList), 1000); setTimeout(()=> sendNetw(protoRequestConnectT()), 2000);"
+            <input type="button" onclick="sendNetw(protoStartScan); setTimeout(()=> sendNetw(protoGetAPList), 5000); setTimeout(()=> sendNetw(protoRequestConnectT()), 15000);"
                     value="Connect Stored WIFI">
             <input type="button" onclick="sendCommand(protoLiveStreamT());"
                 value="Start Live Stream"><br>
@@ -971,7 +971,7 @@
                 var now = new Date();
 
                 // Send "keep alive" every 60 seconds; only for models newer then hero 8
-                if (now - connectedDevs[i].lastKeepAlive > 60000) {
+                if (now - connectedDevs[i].lastKeepAlive > 20000) {
                     if (connectedDevs[i].ModelID > 50) {
                         bufferBtAction(sendSettingToSingle, [i, keepAlive]);
                         connectedDevs[i].lastKeepAlive = now;
@@ -981,12 +981,12 @@
                 }
 
                 // Query "Remaining space"
-                if (now - connectedDevs[i].lastMemoryQuery > 7000) {
+                if (now - connectedDevs[i].lastMemoryQuery > 70000) {
                     bufferBtAction(sendQueryToSingle, [qSpace, i]);
                     connectedDevs[i].lastMemoryQuery = now;
                 }
                 // Query "Active preset"
-                if (now - connectedDevs[i].lastPresetQuery > 2000) {
+                if (now - connectedDevs[i].lastPresetQuery > 20000) {
                     if (connectedDevs[i].ModelID > 21) { // qPreset query not supported from Hero 5 Black
                         bufferBtAction(sendQueryToSingle, [qPreset, i]);
                     } else {
@@ -995,7 +995,7 @@
                     connectedDevs[i].lastPresetQuery = now;
                 }
                 // Read "Battery level"
-                if (now - connectedDevs[i].lastBatteryRead > 10000) {
+                if (now - connectedDevs[i].lastBatteryRead > 100000) {
                     bufferBtAction(readValue, [connectedDevs[i].battLevelCharacteristic]);
                     connectedDevs[i].lastBatteryRead = now;
                 }
@@ -1019,6 +1019,12 @@
             if (connectedDevs[i].server.device.id == sender_id) {
                 switch (uuid) {
                     case commandRespUUID:
+                        if (command == 0xF1) //protobuf
+                        {
+                            console.log("cmd proto resp ", command, bytes.length, bytes) //Array.apply([], buffer).join(",")
+                            break;
+                        }
+
                         var error_str = "";
                         switch (error) {
                             case 0:
@@ -1035,8 +1041,14 @@
                         }
                         connectedDevs[i].LE = error_str;
                         break;
+                    case networkRespUUID:
+                    console.log("netw resp ", command, bytes.length, bytes) //Array.apply([], buffer).join(",")
+                        break;
                     case settingsRespUUID:
+                    if (command == 0x5B)
+                        console.log("keepa new");
                         if (resp[3] == 0x5B) { // Keep alive
+                            console.log("keepa orig");
                             // do nothing with keep alive response
                         }
                         break;
