@@ -238,10 +238,10 @@
         <div style="display:inline-block;">
             <input type="button" onclick="sendNetw(protoStartScan); setTimeout(()=> sendNetw(protoGetAPList), 5000); setTimeout(()=> sendNetw(protoRequestConnectT()), 15000);"
                     value="Connect Stored WIFI">
-            <input type="button" onclick="sendCommand(protoLiveStreamT());"
+            <input type="button" onclick="sendCommand(protoLiveStreamT()); setTimeout(()=> sendQuery(protoStreamStatusOn), 5000);"
                 value="Start Live Stream"><br>
-            <p>WIFI:</p> <p id="wifi_id" contenteditable="true">net_id</p>  <p>MBPS:</p>  <p id="mbps_id" contenteditable="true">8000</p> <br>
-            <p>RTMP:</p> <p id="rtmp_id" contenteditable="true">rtmp://192.168.0.1/</p><br>
+            <p>WIFI:</p> <p id="wifi_id" contenteditable="true">Atom</p>  <p>MBPS:</p>  <p id="mbps_id" contenteditable="true">8000</p> <br>
+            <p>RTMP:</p> <p id="rtmp_id" contenteditable="true">rtmp://192.168.43.36/</p><br>
         </div>
     </fieldset>
 
@@ -443,6 +443,7 @@
         return encodeBLE(command);
     }
     var streamProtobuf
+    var protoStreamStatusOn = encodeBLE([0xF5, 0x74, 0x08, 0x01, 0x08, 0x02, 0x08, 0x03, 0x08, 0x04]);
     var protoLiveStreamT = function() {
         var header = [0xF1, 0x79];
         var pbRoot = protobuf.parse(streamProtobuf, { keepCase: true }).root;
@@ -451,14 +452,16 @@
         var url = document.getElementById("rtmp_id").innerText
         var bitrate = parseInt(document.getElementById("mbps_id").innerText)
 
+        //setting all 3 bitrates errors out, skipping starting_bitrate - least important
+        // dont use symbolic enums in protobuf.js like: "window_size": "WINDOW_SIZE_1080",
+        // "lens": "LENS_WIDE"
         var payload = {
             "url": url,
             "encode": false,
-            "window_size": "WINDOW_SIZE_1080",
-            "minimum_bitrate": bitrate,
+            "window_size": 12,
             "maximum_bitrate": bitrate,
-            "starting_bitrate": bitrate,
-            "lens": "LENS_WIDE"
+            "minimum_bitrate": bitrate,
+            "lens": 0
           };
 
         var buffer = RequestSetLiveStreamMode.encode(RequestSetLiveStreamMode.create(payload)).finish();
@@ -935,6 +938,13 @@
             }
     }
 
+    function sendQuery(command) {
+        for (subCmd of chunk(command, 20))
+            for (var i = 0; i < connectedDevs.length; i++) {
+                bufferBtAction(sendQueryToSingle, [subCmd, i]);
+            }
+    }
+
     function sendQueryToSingle(args) {
         var query = args[0],
             camIndex = args[1];
@@ -1053,6 +1063,12 @@
                         }
                         break;
                     case queryRespUUID:
+                        if (command == 0xF5) //protobuf
+                        {
+                            console.log("query proto resp ", command, bytes.length, bytes) //Array.apply([], buffer).join(",")
+                            break;
+                        }
+
                         var resp = new Uint8Array(value.buffer);
                         if (resp[3] == 0x36 && resp[4] == 8) { // Remaining space
                             let bytes = [resp[5], resp[6], resp[7], resp[8], resp[9], resp[10], resp[11], resp[12]];
